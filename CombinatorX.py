@@ -3,6 +3,8 @@ import copy
 import collections
 import itertools
 import time
+import random
+import difflib
 
 MACROS = {}
 
@@ -264,21 +266,18 @@ def from_graph(node, visited=None):
 def reduce_graph_step(root):
     spine = []
     curr = root
-    
     while True:
         while curr.type == GNode.IND: curr = curr.left
         if curr.type == GNode.APP:
             spine.append(curr)
             curr = curr.left
-        else:
-            break
+        else: break
     
     head = curr
     if head.type != GNode.COMB: return False
     
     name = head.value
     arity, _ = RULES.get(name, (999, None))
-    
     if len(spine) < arity: return False
     
     relevant_apps = spine[-arity:]
@@ -290,63 +289,44 @@ def reduce_graph_step(root):
     if name == 'I':
         redex_root.type = GNode.IND
         redex_root.left = args[0]
-        
     elif name == 'K':
         redex_root.type = GNode.IND
         redex_root.left = args[0]
-        
     elif name == 'S':
-        x, y, z = args[0], args[1], args[2]
-        node1 = GNode(GNode.APP, x, z)
-        node2 = GNode(GNode.APP, y, z)
+        node1 = GNode(GNode.APP, args[0], args[2])
+        node2 = GNode(GNode.APP, args[1], args[2])
         redex_root.type = GNode.APP
         redex_root.left = node1
         redex_root.right = node2
-        
     elif name == 'B':
-        x, y, z = args[0], args[1], args[2]
-        node1 = GNode(GNode.APP, y, z)
+        node1 = GNode(GNode.APP, args[1], args[2])
         redex_root.type = GNode.APP
-        redex_root.left = x
+        redex_root.left = args[0]
         redex_root.right = node1
-        
     elif name == 'C':
-        x, y, z = args[0], args[1], args[2]
-        node1 = GNode(GNode.APP, x, z)
+        node1 = GNode(GNode.APP, args[0], args[2])
         redex_root.type = GNode.APP
         redex_root.left = node1
-        redex_root.right = y
-        
+        redex_root.right = args[1]
     elif name == 'M':
-        x = args[0]
         redex_root.type = GNode.APP
-        redex_root.left = x
-        redex_root.right = x
-        
+        redex_root.left = args[0]
+        redex_root.right = args[0]
     elif name == 'T':
-        x, y = args[0], args[1]
         redex_root.type = GNode.APP
-        redex_root.left = y
-        redex_root.right = x
-        
-    else:
-        return False
-        
+        redex_root.left = args[1]
+        redex_root.right = args[0]
+    else: return False
     return True
 
 def run_graph_reduction(term, limit=1000):
-    try:
-        root = to_graph(term)
-    except ValueError as e:
-        print(f"Graph Error: {e}")
-        return term
-
+    try: root = to_graph(term)
+    except ValueError as e: return term
     steps = 0
     while steps < limit:
         changed = reduce_graph_step(root)
         if not changed: break
         steps += 1
-    
     if steps == limit: return Var("LIMIT_EXCEEDED")
     return from_graph(root)
 
@@ -381,12 +361,141 @@ def generate_terms(size, primitives):
             for r in generate_terms(size - i, primitives):
                 yield App(l, r)
 
+# ==========================================
+# Genetic Algorithm
+# ==========================================
+
+def get_tree_size(term):
+    if isinstance(term, App): return 1 + get_tree_size(term.left) + get_tree_size(term.right)
+    return 1
+
+def random_term(depth, basis):
+    if depth == 1 or (depth > 1 and random.random() < 0.3):
+        return Var(random.choice(basis))
+    left = random_term(depth - 1, basis)
+    right = random_term(depth - 1, basis)
+    return App(left, right)
+
+def get_subterm_at(term, index, current_idx):
+    if isinstance(term, App):
+        current_idx, found = get_subterm_at(term.left, index, current_idx)
+        if found: return current_idx, found
+        
+        current_idx, found = get_subterm_at(term.right, index, current_idx)
+        if found: return current_idx, found
+        
+        if current_idx == index: return current_idx + 1, term
+        return current_idx + 1, None
+    else:
+        if current_idx == index: return current_idx + 1, term
+        return current_idx + 1, None
+
+def replace_subterm_at(term, index, current_idx, replacement):
+    if isinstance(term, App):
+        current_idx, new_left = replace_subterm_at(term.left, index, current_idx, replacement)
+        if new_left is not term.left: return current_idx, App(new_left, term.right)
+        
+        current_idx, new_right = replace_subterm_at(term.right, index, current_idx, replacement)
+        if new_right is not term.right: return current_idx, App(term.left, new_right)
+        
+        if current_idx == index: return current_idx + 1, replacement
+        return current_idx + 1, term
+    else:
+        if current_idx == index: return current_idx + 1, replacement
+        return current_idx + 1, term
+
+def mutate(term, basis):
+    size = get_tree_size(term)
+    target_idx = random.randint(0, size - 1)
+    
+    r = random.random()
+    if r < 0.33: # Replace with random basic
+        new_sub = Var(random.choice(basis))
+    elif r < 0.66: # Grow
+        new_sub = App(Var(random.choice(basis)), Var(random.choice(basis)))
+    else: # Swap order (if App)
+        _, sub = get_subterm_at(term, target_idx, 0)
+        if isinstance(sub, App): new_sub = App(sub.right, sub.left)
+        else: new_sub = Var(random.choice(basis))
+
+    _, new_term = replace_subterm_at(term, target_idx, 0, new_sub)
+    return new_term
+
+def crossover(p1, p2):
+    s1, s2 = get_tree_size(p1), get_tree_size(p2)
+    idx1, idx2 = random.randint(0, s1-1), random.randint(0, s2-1)
+    
+    _, sub1 = get_subterm_at(p1, idx1, 0)
+    _, sub2 = get_subterm_at(p2, idx2, 0)
+    
+    _, c1 = replace_subterm_at(p1, idx1, 0, sub2)
+    _, c2 = replace_subterm_at(p2, idx2, 0, sub1)
+    
+    return c1, c2
+
+def calculate_fitness(candidate, target_body, target_args):
+    # Construct test term
+    test = candidate
+    for arg in target_args: test = App(test, Var(arg))
+    
+    try:
+        res = run_reduction(test, limit=60)
+        targ = run_reduction(target_body, limit=60)
+        
+        s_res = str(to_de_bruijn(res))
+        s_targ = str(to_de_bruijn(targ))
+        
+        # Structural similarity (0.0 to 1.0)
+        sim = difflib.SequenceMatcher(None, s_res, s_targ).ratio()
+        
+        # Penalize length bloat
+        len_pen = max(0, len(s_res) - len(s_targ)) * 0.01
+        return max(0, sim - len_pen)
+    except:
+        return 0.0
+
+def search_genetic(target_name, target_args, target_body, basis, pop_size=50, generations=100):
+    print(f"Evolving '{target_name}' using {basis}...")
+    population = [random_term(random.randint(1, 4), basis) for _ in range(pop_size)]
+    
+    for gen in range(generations):
+        # Calc fitness
+        scores = []
+        for ind in population:
+            fit = calculate_fitness(ind, target_body, target_args)
+            if fit >= 1.0: return ind
+            scores.append((fit, ind))
+        
+        scores.sort(key=lambda x: x[0], reverse=True)
+        best_fit, best_ind = scores[0]
+        
+        if gen % 10 == 0:
+            print(f"Gen {gen}: Best Fitness {best_fit:.4f} -> {best_ind}")
+            
+        # Selection (Top 50%)
+        survivors = [s[1] for s in scores[:pop_size//2]]
+        
+        # Repopulate
+        new_pop = survivors[:]
+        while len(new_pop) < pop_size:
+            if random.random() < 0.7: # Crossover
+                p1, p2 = random.sample(survivors, 2)
+                c1, c2 = crossover(p1, p2)
+                new_pop.append(c1)
+                if len(new_pop) < pop_size: new_pop.append(c2)
+            else: # Mutation
+                p = random.choice(survivors)
+                new_pop.append(mutate(p, basis))
+                
+        population = new_pop
+        
+    return scores[0][1]
+
 def load_stdlib():
     print("Loading Standard Library...")
     for name, code in STD_LIB_DEFS.items():
         _, _, body = parse_definition(f"{name} = {code}")
         MACROS[name] = body
-    
     MACROS["0"] = MACROS["ZERO"]
     curr = MACROS["ZERO"]
     for i in range(1, 10):
@@ -396,7 +505,8 @@ def load_stdlib():
 def help_msg():
     print("Commands:")
     print("  def <name> <args> = <body>   : Define combinator")
-    print("  search <args> = <body> using : Brute force search")
+    print("  search <args> = <body> using : Brute force search (Depth limit)")
+    print("  evolve <args> = <body> using : Genetic search (Evolutionary)")
     print("  reduce <term>                : Standard reduction")
     print("  greduce <term>               : Graph reduction")
     print("  algo <mode>                  : primitive / eta / turner")
@@ -438,19 +548,11 @@ def main():
             if cmd.startswith('greduce'):
                 _, rest = cmd.split(' ', 1)
                 term = parse_expr(tokenize(rest))
-                
-                print(f"Input: {term}")
-                print("Compiling to Combinators...")
                 ski_term = compile_lambdas(term, algo=algorithm)
-                print(f"Compiled: {ski_term}")
-                
-                print("Running Graph Reduction...")
                 start = time.time()
                 res = run_graph_reduction(ski_term, limit=5000)
-                dur = time.time() - start
-                
                 print(f"Result: {res}")
-                print(f"Time  : {dur:.4f}s")
+                print(f"Time  : {time.time() - start:.4f}s")
                 continue
 
             if cmd.startswith('search'):
@@ -461,6 +563,21 @@ def main():
                 found = search_basis(name, args, body, basis_list)
                 if found: print(f"FOUND: {found}")
                 else: print("Not found.")
+                continue
+
+            if cmd.startswith('evolve'):
+                if 'using' not in cmd: continue
+                def_p, basis_p = cmd.split('using')
+                basis_list = basis_p.strip().replace(',', ' ').split()
+                name, args, body = parse_definition("GOAL " + def_p.replace('evolve','').strip())
+                found = search_genetic(name, args, body, basis_list)
+                print(f"Best Found: {found}")
+                
+                # Check exact match
+                if check_equivalence(found, name, args, body, RULES):
+                    print("Status: EXACT MATCH \u2705")
+                else:
+                    print("Status: Approximate/Incorrect \u274c")
                 continue
 
             print("Unknown command.")
