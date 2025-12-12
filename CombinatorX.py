@@ -4,6 +4,27 @@ import collections
 import itertools
 import time
 
+MACROS = {}
+
+STD_LIB_DEFS = {
+    "TRUE":  "(\\x y. x)",
+    "FALSE": "(\\x y. y)",
+    "IF":    "(\\p a b. p a b)",
+    "AND":   "(\\p q. p q p)",
+    "OR":    "(\\p q. p p q)",
+    "NOT":   "(\\p. p (\\x y. y) (\\x y. x))",
+    "PAIR":  "(\\x y f. f x y)",
+    "FST":   "(\\p. p (\\x y. x))",
+    "SND":   "(\\p. p (\\x y. y))",
+    "ZERO":  "(\\f x. x)",
+    "SUCC":  "(\\n f x. f (n f x))",
+    "ADD":   "(\\m n f x. m f (n f x))",
+    "MULT":  "(\\m n f. m (n f))",
+    "POW":   "(\\b e. e b)",
+    "Y":     "(\\f. (\\x. f (x x)) (\\x. f (x x)))",
+    "OMEGA": "((\\x. x x) (\\x. x x))",
+}
+
 class Term:
     def __repr__(self): return str(self)
     def __hash__(self): return hash(str(self))
@@ -61,6 +82,8 @@ def parse_term(tokens):
             term = Abs(p, term)
         return term
     else:
+        if token in MACROS:
+            return copy.deepcopy(MACROS[token])
         return Var(token)
 
 def parse_expr(tokens):
@@ -231,21 +254,36 @@ def generate_terms(size, primitives):
             for r in generate_terms(right_size, primitives):
                 yield App(l, r)
 
+def load_stdlib():
+    print("Loading Standard Library...")
+    
+    for name, code in STD_LIB_DEFS.items():
+        _, _, body = parse_definition(f"{name} = {code}")
+        MACROS[name] = body
+        
+    MACROS["0"] = MACROS["ZERO"]
+    current_term = MACROS["ZERO"]
+    
+    for i in range(1, 10):
+        succ_macro = MACROS["SUCC"]
+        current_term = App(copy.deepcopy(succ_macro), current_term)
+        MACROS[str(i)] = current_term
+
 def help_msg():
     print("Commands:")
-    print("  def <name> <args> = <body>   : Define/Derive a combinator using standard abstraction")
-    print("  search <args> = <body> using <bases> : Find combinator using brute force")
-    print("  algo <mode>                  : Set algorithm (primitive, eta, turner)")
-    print("  reduce <term>                : Trace reduction")
+    print("  def <name> <args> = <body>   : Define/Derive a combinator")
+    print("  search <args> = <body> using <bases> : Brute force search")
+    print("  reduce <term>                : Trace reduction (supports macros like ADD, 2)")
+    print("  algo <mode>                  : Set algo (primitive, eta, turner)")
+    print("  macros                       : List loaded macros")
     print("  quit                         : Exit")
-    print("\nExamples:")
-    print("  def T x y = y x")
-    print("  search x = x x using S K")
-    print("  algo turner")
 
 def main():
-    print("=== Universal Combinatory Logic Workbench ===")
-    print("Type 'help' for commands.")
+    print("=== CombinatorX: Universal Logic Workbench ===")
+    
+    load_stdlib()
+    
+    print("\nType 'help' for commands.")
     
     algorithm = 'eta'
     
@@ -257,13 +295,17 @@ def main():
             if cmd == 'quit': break
             if cmd == 'help': help_msg(); continue
             
+            if cmd == 'macros':
+                print(f"Loaded Macros: {', '.join(sorted(MACROS.keys()))}")
+                continue
+            
             if cmd.startswith('algo'):
                 parts = cmd.split()
                 if len(parts) > 1 and parts[1] in ['primitive', 'eta', 'turner']:
                     algorithm = parts[1]
                     print(f"Algorithm set to: {algorithm}")
                 else:
-                    print(f"Current algo: {algorithm}. Options: primitive, eta, turner")
+                    print(f"Current algo: {algorithm}")
                 continue
 
             if cmd.startswith('def'):
@@ -274,15 +316,17 @@ def main():
                 print(f"Result: {result}")
                 print(f"Size  : {str(result).count('(') + 1} nodes")
                 
+                MACROS[name] = result
+                print(f"Note: '{name}' registered as macro.")
+                
                 test = result
                 for a in args: test = App(test, Var(a))
-                print(f"Check : {test} -> {run_reduction(test)}")
                 continue
 
             if cmd.startswith('reduce'):
                 _, rest = cmd.split(' ', 1)
                 term = parse_expr(tokenize(rest))
-                run_reduction(term, verbose=True)
+                run_reduction(term, verbose=True, limit=100)
                 continue
 
             if cmd.startswith('search'):
@@ -307,14 +351,10 @@ def main():
                     print("Not found within depth limit.")
                 continue
 
-            print("Unknown command. Try 'reduce <term>' or 'def ...'")
+            print("Unknown command. Try 'reduce ADD 2 2'")
             
         except Exception as e:
             print(f"Error: {e}")
 
 if __name__ == "__main__":
-    t_name, t_args, t_body = parse_definition("T x y = y x")
-    res = compile_term(t_args, t_body, algo='eta')
-    print(f"Self-Check Txy=yx: {res}") 
-    
     main()
