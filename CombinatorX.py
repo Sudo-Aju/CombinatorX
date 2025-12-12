@@ -35,6 +35,11 @@ class Var(Term):
         self.name = name
     def __str__(self): return self.name
 
+class Index(Term):
+    def __init__(self, val):
+        self.val = val
+    def __str__(self): return f"_{self.val}"
+
 class App(Term):
     def __init__(self, left, right):
         self.left = left
@@ -99,10 +104,24 @@ def parse_definition(text):
     body = parse_expr(rhs)
     return name, args, body
 
+def to_de_bruijn(term, env=None):
+    if env is None: env = []
+    if isinstance(term, App):
+        return App(to_de_bruijn(term.left, env), to_de_bruijn(term.right, env))
+    if isinstance(term, Abs):
+        return Abs("_", to_de_bruijn(term.body, [term.param] + env))
+    if isinstance(term, Var):
+        try:
+            return Index(env.index(term.name))
+        except ValueError:
+            return term
+    return term
+
 def free_vars(term):
     if isinstance(term, Var): return {term.name}
     if isinstance(term, App): return free_vars(term.left) | free_vars(term.right)
     if isinstance(term, Abs): return free_vars(term.body) - {term.param}
+    if isinstance(term, Index): return set()
     return set()
 
 def abstract_primitive(x, term):
@@ -337,7 +356,11 @@ def check_equivalence(candidate, target_name, target_args, target_body, basis):
     
     red_cand = run_reduction(test_term, limit=100)
     red_targ = run_reduction(target_body, limit=100)
-    return str(red_cand).replace(" ","") == str(red_targ).replace(" ","")
+    
+    db_cand = to_de_bruijn(red_cand)
+    db_targ = to_de_bruijn(red_targ)
+    
+    return str(db_cand) == str(db_targ)
 
 def search_basis(target_name, target_args, target_body, basis_list, max_depth=4):
     print(f"Searching for '{target_name}' using basis {basis_list}...")
@@ -374,8 +397,8 @@ def help_msg():
     print("Commands:")
     print("  def <name> <args> = <body>   : Define combinator")
     print("  search <args> = <body> using : Brute force search")
-    print("  reduce <term>                : Standard reduction (step-by-step)")
-    print("  greduce <term>               : Graph reduction (fast, compiles first)")
+    print("  reduce <term>                : Standard reduction")
+    print("  greduce <term>               : Graph reduction")
     print("  algo <mode>                  : primitive / eta / turner")
     print("  quit")
 
