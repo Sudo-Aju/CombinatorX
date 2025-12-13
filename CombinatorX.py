@@ -867,6 +867,9 @@ class HelpSystem:
         for key in ThemeDatabase.THEMES:
             if query.lower() in key.lower():
                 results.append(key)
+        for key, text in Encyclopedia.ENTRIES.items():
+            if query.lower() in key.lower() or query.lower() in text.lower():
+                results.append(key)
         return results
 
 class AdvancedMath:
@@ -1278,6 +1281,29 @@ class CombinatorApp:
         try:
             if action == "help":
                 self._toggle_help()
+                return
+
+            elif action == "doc":
+                if not args:
+                    self.output_label.text = "Syntax: doc <term> (e.g. doc S, doc Lambda)"
+                else:
+                    query = args.strip()
+                    definition = Encyclopedia.ENTRIES.get(query)
+                    
+                    if not definition:
+                        for k, v in Encyclopedia.ENTRIES.items():
+                            if k.lower() == query.lower():
+                                definition = v
+                                break
+                    
+                    if definition:
+                        self.output_label.text = f"{query}: {definition}"
+                    else:
+                        matches = [k for k in Encyclopedia.ENTRIES.keys() if query.lower() in k.lower()]
+                        if matches:
+                            self.output_label.text = f"Did you mean: {', '.join(matches)}?"
+                        else:
+                            self.output_label.text = f"No docs found for '{query}'"
                 return
 
             elif action == "def":
