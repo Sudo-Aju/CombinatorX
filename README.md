@@ -10,6 +10,7 @@
     <li><strong>Type Inference</strong>: Hindley-Milner type system to check expressions before execution (<code>type \x.x</code>).</li>
     <li><strong>Visual TUI</strong>: A windowed interface with support for themes, resizing, and scrolling.</li>
     <li><strong>Standard Library</strong>: Built-in definitions for Church Arithmetic, Boolean Logic, Lists, and standard Combinators (S, K, I, Y, etc.).</li>
+    <li><strong>Dynamic Theming</strong>: Switch between various visual themes (e.g., Neon Night, Solarized, Dracula) on the fly.</li>
     <li><strong>Intro Animation</strong>: A Matrix-inspired startup sequence.</li>
 </ul>
 
@@ -25,7 +26,7 @@
 
 <p>Clone the repository or download the source code:</p>
 
-<pre><code>git clone https://github.com/yourusername/CombinatorX.git
+<pre><code>git clone https://github.com/Sudo-Aju/CombinatorX.git
 cd CombinatorX
 </code></pre>
 
@@ -54,6 +55,17 @@ a -&gt; a</code></pre>
     </li>
     <li><strong>Reduction</strong>: Force full reduction of a term.
         <pre><code>&gt; reduce ADD ONE TWO</code></pre>
+    </li>
+    <li><strong>Themes</strong>: Switch the visual theme.
+        <pre><code>&gt; theme list
+&gt; theme Solarized Light</code></pre>
+    </li>
+    <li><strong>Macros</strong>: View all defined combinators and standard library functions.
+        <pre><code>&gt; macros
+(or use 'lib')</code></pre>
+    </li>
+    <li><strong>Secrets</strong>: Unlock hidden features.
+        <pre><code>&gt; matrix</code></pre>
     </li>
     <li><strong>Quit</strong>: Exit the application.
         <pre><code>&gt; quit</code></pre>
@@ -89,6 +101,10 @@ a -&gt; a</code></pre>
         <tr>
             <td><strong>PageUp / PageDown</strong></td>
             <td>Scroll Help Text</td>
+        </tr>
+        <tr>
+            <td><strong>Left / Right</strong></td>
+            <td>Navigate Help Chapters</td>
         </tr>
         <tr>
             <td><strong>Ctrl+C</strong></td>

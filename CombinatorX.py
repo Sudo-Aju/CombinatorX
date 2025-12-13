@@ -213,9 +213,7 @@ class InputSystem:
                                 if select.select([fd], [], [], 0.1)[0]:
                                     if os.read(fd, 1).decode(errors='ignore') == '~': self.keys.append('PAGE_DOWN')
                             else:
-                                # Unknown sequence like [X, just push the individual keys as fallback? 
-                                # Or ignore. Let's push unknown sequence chars so user sees them?
-                                # Actually sticking to logic:
+
                                 pass
                         elif k2 == 'O': 
                             if select.select([fd], [], [], 0.1)[0]:
@@ -228,7 +226,7 @@ class InputSystem:
                                 elif k3 == 'C': self.keys.append('RIGHT')
                                 elif k3 == 'D': self.keys.append('LEFT')
                         else:
-                            # Escape followed by something else (e.g. alt key?)
+
                             self.keys.append('ESCAPE')
                             self.keys.append(k2)
                     else:
@@ -1394,23 +1392,6 @@ class EasterEggs:
         for line in EasterEggs.MATRIX_CODE:
             sys.stdout.write(f"\033[32m{line}\033[0m\n")
             time.sleep(1)
-
-
-class ChangelogRegistry:
-    HISTORY = {
-        'v1.0.0': "Initial release of the Lambda Calculator. Supported basic SKI combinators and weak reduction. User interface was a simple CLI loop. No type checking was implemented at this stage. Performance was slow due to naive substitution algorithms.",
-        'v1.1.0': "Added the B, C, and W combinators to the core engine. These allow for more compact representation of terms. Optimized the parser to handle nested parentheses better. Fixed a critical bug in the substitution logic where free variables were captured incorrectly.",
-        'v1.2.0': "Introduced the De Bruijn index representation internally. This sped up alpha-conversion significantly. Added a 'trace' command to see step-by-step reduction. The UI was updated to show colored output for the first time.",
-        'v2.0.0': "Major rewrite of the reduction engine. Now uses Graph Reduction instead of string manipulation. This provides a 100x speedup for recursive functions like Factorial. Added the Church Numerals standard library.",
-        'v2.1.0': "Implemented the Hindley-Milner type system. Now the engine can infer types for any expression. Added 'let' polymorphism support. The type checker reports unification errors with detailed messages.",
-        'v2.5.0': "Added support for 'definitions' in a script file. Users can now load .lx files with macros. Added the 'export' command to generate Dot graph files for Graphviz visualization.",
-        'v3.0.0': "Evolutionary Algorithm added. The 'evolve' command can now search for combinators that satisfy a given input/output pair. This uses a genetic programming approach with tournament selection.",
-        'v3.5.0': "Added the 'algo' switch to change between different abstraction algorithms (Primitive, Eta, Turner). Turner's algorithm produces much smaller SKI terms.",
-        'v4.0.0': "Complete UI overhaul. Added banners, progress bars, and tables. The CLI is now much more user-friendly. Added the 'bench' command for performance testing.",
-        'v4.1.0': "Fixed memory leaks in the graph node allocator. Optimized the garbage collector. Added support for very large terms (up to 1 million nodes).",
-        'v4.2.0': "Added 'step-by-step' debugging mode for graph reduction. Users can now see pointers flipping in real time.",
-        'v5.0.0': "The 'ULTRA' update. Replaced standard I/O with a custom TUI engine. Added windowing, mouse support, and a massive knowledge base. This is the current version."
-    }
 
 class DeprecatedAPIs:
     @staticmethod
