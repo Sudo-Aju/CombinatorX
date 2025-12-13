@@ -43,6 +43,32 @@ class Constants:
         'underline': '\033[4m'
     }
 
+    PALETTE_SOLARIZED_LIGHT = {
+        'background': '\033[48;2;253;246;227m',
+        'foreground': '\033[38;2;101;123;131m',
+        'selection': '\033[48;2;238;232;213m',
+        'accent_primary': '\033[38;2;181;137;0m',
+        'accent_secondary': '\033[38;2;42;161;152m',
+        'accent_tertiary': '\033[38;2;211;54;130m',
+        'text_dim': '\033[38;2;147;161;161m',
+        'text_success': '\033[38;2;133;153;0m',
+        'text_error': '\033[38;2;220;50;47m',
+        'text_warning': '\033[38;2;203;75;22m',
+        'header_bg': '\033[48;2;238;232;213m',
+        'border': '\033[38;2;147;161;161m',
+        'reset': '\033[0m',
+        'bold': '\033[1m',
+        'italic': '\033[3m',
+        'underline': '\033[4m'
+    }
+
+    THEMES = {
+        'Neon Night': PALETTE_NEON,
+        'Solarized Light': PALETTE_SOLARIZED_LIGHT
+    }
+
+    CURRENT_PALETTE = PALETTE_NEON
+
     SYMBOLS = {
         'tl': '┌', 'tr': '┐', 'bl': '└', 'br': '┘',
         'h': '─', 'v': '│',
@@ -63,7 +89,7 @@ class ScreenBuffer:
         self.height = height
 
         self.buffer = [[' ' for _ in range(width)] for _ in range(height)]
-        self.styles = [[Constants.PALETTE_NEON['reset'] for _ in range(width)] for _ in range(height)]
+        self.styles = [[Constants.CURRENT_PALETTE['reset'] for _ in range(width)] for _ in range(height)]
 
         self.prev_buffer = [['' for _ in range(width)] for _ in range(height)]
         self.prev_styles = [['' for _ in range(width)] for _ in range(height)]
@@ -74,7 +100,7 @@ class ScreenBuffer:
         self.width = w
         self.height = h
         self.buffer = [[' ' for _ in range(w)] for _ in range(h)]
-        self.styles = [[Constants.PALETTE_NEON['reset'] for _ in range(w)] for _ in range(h)]
+        self.styles = [[Constants.CURRENT_PALETTE['reset'] for _ in range(w)] for _ in range(h)]
         self.prev_buffer = [['' for _ in range(w)] for _ in range(h)]
         self.prev_styles = [['' for _ in range(w)] for _ in range(h)]
         self.force_redraw = True
@@ -249,7 +275,7 @@ class Widget:
         self.focused = False
         self.visible = True
         self.children = []
-        self.style = Constants.PALETTE_NEON['foreground']
+        self.style = Constants.CURRENT_PALETTE['foreground']
 
     def update(self, dt):
         for child in self.children: child.update(dt)
@@ -290,9 +316,9 @@ class Window(Widget):
         self.active_tab = 0
 
     def on_draw(self, buffer, x, y):
-        style = Constants.PALETTE_NEON['accent_primary'] if self.focused else Constants.PALETTE_NEON['border']
+        style = Constants.CURRENT_PALETTE['accent_primary'] if self.focused else Constants.CURRENT_PALETTE['border']
         buffer.draw_box(x, y, self.width, self.height, style, double=True, title=self.title)
-        buffer.fill_rect(x + 1, y + 1, self.width - 2, self.height - 2, ' ', Constants.PALETTE_NEON['background'])
+        buffer.fill_rect(x + 1, y + 1, self.width - 2, self.height - 2, ' ', Constants.CURRENT_PALETTE['background'])
 
 class Label(Widget):
     def __init__(self, text, x, y, w=None):
@@ -309,8 +335,8 @@ class ProgressBar(Widget):
 
     def on_draw(self, buffer, x, y):
         filled = int(self.width * self.value)
-        buffer.put_string(x, y, Constants.SYMBOLS['block'] * filled, Constants.PALETTE_NEON['accent_secondary'])
-        buffer.put_string(x + filled, y, Constants.SYMBOLS['shade_l'] * (self.width - filled), Constants.PALETTE_NEON['text_dim'])
+        buffer.put_string(x, y, Constants.SYMBOLS['block'] * filled, Constants.CURRENT_PALETTE['accent_secondary'])
+        buffer.put_string(x + filled, y, Constants.SYMBOLS['shade_l'] * (self.width - filled), Constants.CURRENT_PALETTE['text_dim'])
 
 class TextInput(Widget):
     def __init__(self, x, y, w):
@@ -346,7 +372,7 @@ class TextInput(Widget):
         return False
 
     def on_draw(self, buffer, x, y):
-        style = Constants.PALETTE_NEON['foreground'] if self.focused else Constants.PALETTE_NEON['text_dim']
+        style = Constants.CURRENT_PALETTE['foreground'] if self.focused else Constants.CURRENT_PALETTE['text_dim']
         display_text = self.text
         if len(display_text) > self.width - 1:
             display_text = display_text[-(self.width-1):]
@@ -354,7 +380,7 @@ class TextInput(Widget):
         buffer.put_string(x, y, display_text, style)
         if self.focused and self.blink_state:
             cx = x + min(self.cursor_pos, self.width - 1)
-            buffer.put_char(cx, y, '_', Constants.PALETTE_NEON['accent_tertiary'])
+            buffer.put_char(cx, y, '_', Constants.CURRENT_PALETTE['accent_tertiary'])
 
 class TextDisplay(Widget):
     def __init__(self, x, y, w, h, content=""):
@@ -388,8 +414,8 @@ class TextDisplay(Widget):
 
     def on_draw(self, buffer, x, y):
 
-        style = Constants.PALETTE_NEON['border']
-        if self.focused: style = Constants.PALETTE_NEON['accent_primary']
+        style = Constants.CURRENT_PALETTE['border']
+        if self.focused: style = Constants.CURRENT_PALETTE['accent_primary']
         buffer.draw_box(x, y, self.width, self.height, style, double=False)
         
 
@@ -400,13 +426,13 @@ class TextDisplay(Widget):
         end = start + view_h
         
         for i, line in enumerate(self.lines[start:end]):
-            buffer.put_string(x + 1, y + 1 + i, line, Constants.PALETTE_NEON['foreground'], max_width=view_w)
+            buffer.put_string(x + 1, y + 1 + i, line, Constants.CURRENT_PALETTE['foreground'], max_width=view_w)
             
      
         if len(self.lines) > view_h:
             scroll_pct = start / (len(self.lines) - view_h)
             bar_pos = int(scroll_pct * (view_h - 1))
-            buffer.put_char(x + self.width - 1, y + 1 + bar_pos, '█', Constants.PALETTE_NEON['accent_secondary'])
+            buffer.put_char(x + self.width - 1, y + 1 + bar_pos, '█', Constants.CURRENT_PALETTE['accent_secondary'])
 
 class StatusBar(Widget):
     def __init__(self, x, y, w):
@@ -421,9 +447,9 @@ class StatusBar(Widget):
         self.memory = memory
 
     def on_draw(self, buffer, x, y):
-        bg = Constants.PALETTE_NEON['header_bg']
-        fg = Constants.PALETTE_NEON['foreground']
-        accent = Constants.PALETTE_NEON['accent_tertiary']
+        bg = Constants.CURRENT_PALETTE['header_bg']
+        fg = Constants.CURRENT_PALETTE['foreground']
+        accent = Constants.CURRENT_PALETTE['accent_tertiary']
         
         text = f" MODE: {self.mode} │ {self.status} │ MEM: {self.memory} "
         buffer.fill_rect(x, y, self.width, 1, ' ', bg)
@@ -1146,7 +1172,7 @@ class CombinatorApp:
         
         frames = 60
         for f in range(frames):
-            self.buffer.fill_rect(0, 0, w, h, ' ', Constants.PALETTE_NEON['background'])
+            self.buffer.fill_rect(0, 0, w, h, ' ', Constants.CURRENT_PALETTE['background'])
             
             
             for drop in drops:
@@ -1157,17 +1183,17 @@ class CombinatorApp:
                 
                 dy = int(drop['y'])
                 if 0 <= dy < h:
-                     color = Constants.PALETTE_NEON['accent_secondary'] if random.random() > 0.1 else Constants.PALETTE_NEON['foreground']
+                     color = Constants.CURRENT_PALETTE['accent_secondary'] if random.random() > 0.1 else Constants.CURRENT_PALETTE['foreground']
                      self.buffer.put_char(drop['x'], dy, drop['char'], color)
 
             
             if f > 10:
                 opacity = min(1.0, (f - 10) / 30.0)
                 if opacity > 0.5:
-                     self.buffer.draw_box(cx - 15, cy - 2, 30, 5, Constants.PALETTE_NEON['accent_primary'], double=True)
-                     self.buffer.put_string(cx - len(title)//2, cy, title, Constants.PALETTE_NEON['accent_tertiary'] + Constants.PALETTE_NEON['bold'])
+                     self.buffer.draw_box(cx - 15, cy - 2, 30, 5, Constants.CURRENT_PALETTE['accent_primary'], double=True)
+                     self.buffer.put_string(cx - len(title)//2, cy, title, Constants.CURRENT_PALETTE['accent_tertiary'] + Constants.CURRENT_PALETTE['bold'])
                 if opacity > 0.8:
-                     self.buffer.put_string(cx - len(subtitle)//2, cy + 1, subtitle, Constants.PALETTE_NEON['foreground'])
+                     self.buffer.put_string(cx - len(subtitle)//2, cy + 1, subtitle, Constants.CURRENT_PALETTE['foreground'])
 
             self.buffer.render()
             time.sleep(0.05)
@@ -1175,7 +1201,7 @@ class CombinatorApp:
         time.sleep(0.5)
 
     def run(self):
-        print(Constants.PALETTE_NEON['background'])
+        print(Constants.CURRENT_PALETTE['background'])
         os.system('clear')
         self.intro_animation()
         self.input_system.start()
@@ -1235,13 +1261,13 @@ class CombinatorApp:
                 self.status_bar.update_status(self.current_mode, "Running", mem)
                 
                 
-                self.buffer.fill_rect(0, 0, self.buffer.width, self.buffer.height, ' ', Constants.PALETTE_NEON['background'])
+                self.buffer.fill_rect(0, 0, self.buffer.width, self.buffer.height, ' ', Constants.CURRENT_PALETTE['background'])
                 self.root_window.draw(self.buffer)
                 
                         
                 if self.help_view.visible:
                     
-                    self.buffer.fill_rect(self.help_view.x, self.help_view.y, self.help_view.width, self.help_view.height, ' ', Constants.PALETTE_NEON['background'])
+                    self.buffer.fill_rect(self.help_view.x, self.help_view.y, self.help_view.width, self.help_view.height, ' ', Constants.CURRENT_PALETTE['background'])
                     self.help_view.draw(self.buffer)
                     
                 self.buffer.render()
@@ -1251,7 +1277,7 @@ class CombinatorApp:
             pass
         finally:
             self.input_system.stop()
-            print(Constants.PALETTE_NEON['reset'])
+            print(Constants.CURRENT_PALETTE['reset'])
             os.system('clear')
 
     def _handle_global_keys(self, key):
@@ -1331,6 +1357,37 @@ class CombinatorApp:
                     steps += 1
                 res = self.graph_machine.decompile(graph)
                 self.output_label.text = f"Result: {res}"
+            
+
+            elif action == "theme":
+                if not args:
+                    # List themes
+                    themes_list = ", ".join(Constants.THEMES.keys())
+                    self.output_label.text = f"Available themes: {themes_list}"
+                else:
+                    target_theme = args.strip()
+                    matched = None
+                    for t_name in Constants.THEMES:
+                        if t_name.lower() == target_theme.lower():
+                            matched = t_name
+                            break
+                    
+                    if matched:
+                        Constants.CURRENT_PALETTE = Constants.THEMES[matched]
+                        self.output_label.style = Constants.CURRENT_PALETTE['foreground']
+                        self.buffer.force_redraw = True
+                        self.output_label.text = f"Theme switched to: {matched}"
+                    else:
+                        self.output_label.text = f"Theme '{target_theme}' not found."
+
+            elif action == "macros" or action == "lib":
+                macros_list = ", ".join(sorted(self.parser.macros.keys()))
+                self.output_label.text = f"Macros: {macros_list}"
+
+            elif action == "matrix":
+                os.system('clear')
+                EasterEggs.print_matrix()
+                time.sleep(2)
             
             else:
          
