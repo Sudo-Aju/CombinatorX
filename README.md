@@ -2,6 +2,8 @@
 
 <p><strong>CombinatorX</strong> is a powerful, retro-styled Lambda Calculus and Combinatory Logic workbench running entirely in your terminal. It features a custom TUI (Text User Interface), real-time graph reduction, type inference, and a comprehensive standard library of combinators.</p>
 
+<img width="989" height="611" alt="Screenshot 2025-12-13 at 15 49 58" src="https://github.com/user-attachments/assets/b3e22061-1cd1-4db7-bcb9-2443b6f9cc71" />
+
 <h2>Features</h2>
 
 <ul>
@@ -22,6 +24,7 @@
     <li>Standard Python libraries (no external <code>pip</code> dependencies required).</li>
     <li>A terminal with ANSI color support.</li>
 </ul>
+
 
 <h2>Installation</h2>
 
