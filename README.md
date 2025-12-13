@@ -11,6 +11,7 @@
     <li><strong>Visual TUI</strong>: A windowed interface with support for themes, resizing, and scrolling.</li>
     <li><strong>Standard Library</strong>: Built-in definitions for Church Arithmetic, Boolean Logic, Lists, and standard Combinators (S, K, I, Y, etc.).</li>
     <li><strong>Dynamic Theming</strong>: Switch between various visual themes (e.g., Neon Night, Solarized, Dracula) on the fly.</li>
+    <li><strong>Encyclopedia</strong>: Integral documentation system to look up definitions of combinators and theoretical concepts on the fly.</li>
     <li><strong>Intro Animation</strong>: A Matrix-inspired startup sequence.</li>
 </ul>
 
@@ -55,6 +56,10 @@ a -&gt; a</code></pre>
     </li>
     <li><strong>Reduction</strong>: Force full reduction of a term.
         <pre><code>&gt; reduce ADD ONE TWO</code></pre>
+    </li>
+    <li><strong>Documentation</strong>: Access the built-in encyclopedia.
+        <pre><code>&gt; doc S
+S: The Starling combinator. S x y z = x z (y z)...</code></pre>
     </li>
     <li><strong>Themes</strong>: Switch the visual theme.
         <pre><code>&gt; theme list
