@@ -176,43 +176,61 @@ class InputSystem:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
 
     def _listen(self):
+        fd = sys.stdin.fileno()
         while self.running:
-            if select.select([sys.stdin], [], [], 0.1)[0]:
-                k = sys.stdin.read(1)
+            if select.select([fd], [], [], 0.1)[0]:
+                try:
+                    k = os.read(fd, 1).decode(errors='ignore')
+                except OSError:
+                    continue
+                    
                 if k == '\x1b':
-                 
-                    if select.select([sys.stdin], [], [], 0.01)[0]:
-                        k2 = sys.stdin.read(1)
+                    # Detect escape sequence
+                    if select.select([fd], [], [], 0.1)[0]:
+                        k2 = os.read(fd, 1).decode(errors='ignore')
                         if k2 == '[':
-                            k3 = sys.stdin.read(1)
+                            k3 = os.read(fd, 1).decode(errors='ignore')
                             if k3 == 'A': self.keys.append('UP')
                             elif k3 == 'B': self.keys.append('DOWN')
                             elif k3 == 'C': self.keys.append('RIGHT')
                             elif k3 == 'D': self.keys.append('LEFT')
                             elif k3 == '1': 
-                                if select.select([sys.stdin], [], [], 0.01)[0]:
-                                    k4 = sys.stdin.read(1)
+                                if select.select([fd], [], [], 0.1)[0]:
+                                    k4 = os.read(fd, 1).decode(errors='ignore')
                                     if k4 == '1':
-                                         if select.select([sys.stdin], [], [], 0.01)[0]:
-                                             if sys.stdin.read(1) == '~': self.keys.append('F1')
+                                         if select.select([fd], [], [], 0.1)[0]:
+                                             if os.read(fd, 1).decode(errors='ignore') == '~': self.keys.append('F1')
                                     elif k4 == '2':
-                                        if select.select([sys.stdin], [], [], 0.01)[0]:
-                                            if sys.stdin.read(1) == '~': self.keys.append('F2')
+                                        if select.select([fd], [], [], 0.1)[0]:
+                                            if os.read(fd, 1).decode(errors='ignore') == '~': self.keys.append('F2')
                                     elif k4 == '3':
-                                        if select.select([sys.stdin], [], [], 0.01)[0]:
-                                            if sys.stdin.read(1) == '~': self.keys.append('F3')
+                                        if select.select([fd], [], [], 0.1)[0]:
+                                            if os.read(fd, 1).decode(errors='ignore') == '~': self.keys.append('F3')
                             elif k3 == '5':
-                                if select.select([sys.stdin], [], [], 0.01)[0]:
-                                    if sys.stdin.read(1) == '~': self.keys.append('PAGE_UP')
+                                if select.select([fd], [], [], 0.1)[0]:
+                                    if os.read(fd, 1).decode(errors='ignore') == '~': self.keys.append('PAGE_UP')
                             elif k3 == '6':
-                                if select.select([sys.stdin], [], [], 0.01)[0]:
-                                    if sys.stdin.read(1) == '~': self.keys.append('PAGE_DOWN')
+                                if select.select([fd], [], [], 0.1)[0]:
+                                    if os.read(fd, 1).decode(errors='ignore') == '~': self.keys.append('PAGE_DOWN')
+                            else:
+                                # Unknown sequence like [X, just push the individual keys as fallback? 
+                                # Or ignore. Let's push unknown sequence chars so user sees them?
+                                # Actually sticking to logic:
+                                pass
                         elif k2 == 'O': 
-                            if select.select([sys.stdin], [], [], 0.01)[0]:
-                                k3 = sys.stdin.read(1)
+                            if select.select([fd], [], [], 0.1)[0]:
+                                k3 = os.read(fd, 1).decode(errors='ignore')
                                 if k3 == 'P': self.keys.append('F1')
                                 elif k3 == 'Q': self.keys.append('F2')
                                 elif k3 == 'R': self.keys.append('F3')
+                                elif k3 == 'A': self.keys.append('UP')
+                                elif k3 == 'B': self.keys.append('DOWN')
+                                elif k3 == 'C': self.keys.append('RIGHT')
+                                elif k3 == 'D': self.keys.append('LEFT')
+                        else:
+                            # Escape followed by something else (e.g. alt key?)
+                            self.keys.append('ESCAPE')
+                            self.keys.append(k2)
                     else:
                         self.keys.append('ESCAPE')
                 elif k == '\x03': self.keys.append('CTRL_C')
@@ -1166,6 +1184,9 @@ class CombinatorApp:
 
                 while self.input_system.keys:
                     key = self.input_system.get_key()
+   
+                    self.status_bar.update_status(self.current_mode, f"Key: {key}", self.status_bar.memory)
+                    
                     self._handle_global_keys(key)
                     
                     if self.current_mode == "REPL":

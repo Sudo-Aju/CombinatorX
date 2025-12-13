@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+import sys
+import os
+
+d = os.path.dirname(os.path.realpath(__file__))
+cmd = f"python3 \"{d}/CombinatorX.py\" {' '.join(sys.argv[1:])}"
+os.system(cmd)
