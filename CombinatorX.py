@@ -211,7 +211,7 @@ class InputSystem:
                     continue
                     
                 if k == '\x1b':
-                    # Detect escape sequence
+                  
                     if select.select([fd], [], [], 0.1)[0]:
                         k2 = os.read(fd, 1).decode(errors='ignore')
                         if k2 == '[':
@@ -1361,7 +1361,6 @@ class CombinatorApp:
 
             elif action == "theme":
                 if not args:
-                    # List themes
                     themes_list = ", ".join(Constants.THEMES.keys())
                     self.output_label.text = f"Available themes: {themes_list}"
                 else:
